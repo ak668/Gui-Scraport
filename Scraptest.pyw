@@ -18,17 +18,32 @@ class datascraping():
     def __init__(self):
         pass
 
-    def scrapit(self,url,tag,):
+    def scrapit(self,url,tag,attr="",content=False,**kwargs):
         req = requests.get(url)
         soup = BeautifulSoup(req.text,'html5lib')
         out =[]
-        if tag !='':
+        #print(kwargs)
+        #print(tag)
+        if len(tag) !=0 and attr == "" and content is False:
             for lines in soup.find_all(tag):
                 out.append(lines)
+        elif len(tag) is not 0 and len(attr) is not 0:
+            for lines in soup.find_all(tag):
+                txt = lines.get(attr)
+                out.append(txt)
+        elif len(tag) is not 0 and content is True:
+            for lines in soup.find_all(tag):
+                out.append(lines.text)
         else:
             out.append('Extracting raw html data...')
             for lines in soup:
                 out.append(lines)
+        return out
+
+    def scrapitreg(self,url,tag,*args):
+        req = requests.get(url)
+        soup = BeautifulSoup(req.text,'html5lib')
+        out =[]
         return out
 
 
@@ -38,9 +53,9 @@ class scrapprojgui(datascraping):
         v=[]
         v.append(IntVar())
         self.visible=[]
-
+        self.optbox = []
         self.master = master
-        master.title("Scrapy GUI")
+        master.title("GUI Scraport")
         #---------------------------Main Input Data-----------------------------
         self.frame1 = LabelFrame(master,width=640,height=480,text="Input Data",highlightcolor="Black")
         self.frame1.grid(row=0,column=0,padx=10,pady=5,sticky=W)
@@ -50,16 +65,23 @@ class scrapprojgui(datascraping):
 
         self.url_textbox = ttk.Entry(self.frame1,textvariable = "",width=50)
         self.url_textbox.grid(row=1,column=1,padx=5,pady=5)
-        #Search Choice----------------------------------------------------------
-        self.choice1 = ttk.Checkbutton(self.frame1,text = "Tagwise search",command=self.tagwise,variable=v[0],onvalue=1,offvalue=0)
-        self.choice1.grid(row=2,column=1,sticky=W)
+        #-----------------------------Option Box--------------------------------
+        self.optbox.append(ttk.Checkbutton(self.frame1,text = "Tagwise search"))
+        self.optbox[0].configure(command=self.tagwise,variable=v[0],onvalue=1,offvalue=0)
+        self.optbox[0].grid(row=2,column=1,sticky=W)
         self.visible.append(v[0])
 
         v.append(IntVar())
-        self.choice2 = ttk.Checkbutton(self.frame1,text = "Div classwise extract",command=None,variable=v[1],onvalue=1,offvalue=0)
-        self.choice2.grid(row=3,column=1,sticky=W)
+        self.optbox.append(ttk.Checkbutton(self.frame1,text="Exclude Tags on Output"))
+        self.optbox[1].configure(command=self.conshow,variable=v[1],onvalue=1,offvalue=0)
+        self.optbox[1].grid(row=3,column=1,sticky=W)
+        self.visible.append(v[1])
+
+
         #---------------------------Optional Text-------------------------------
         self.tag_inp = ttk.Entry(self.frame1,textvariable = "",width=5)
+        self.attr_inp = ttk.Entry(self.frame1,textvariable="",width=6)
+        self.attrlb = Label(self.frame1,text = "Attribute:",width=7)
         #-----------------------------------------------------------------------
 
         self.extrc_but = ttk.Button(master,text="Scrap it!",command=self.retscrp)
@@ -77,23 +99,24 @@ class scrapprojgui(datascraping):
         self.outp.configure(yscrollcommand=self.scrlly.set,wrap='word')
         self.outp.pack(side="left", fill="both", expand=True,padx=5,pady=5)
         self.outp.see('end')
-        """
-        self.label = Label(self.frame1, text="Test gui")
-        self.label.pack()
-        """
+        self.content =False
+
+
+
     def retscrp(self):
-        self.geturl = self.url_textbox.get()
-        self.gettag = self.tag_inp.get()
+        self.geturl = str(self.url_textbox.get())
+        self.gettag = str(self.tag_inp.get())
+        self.attrinp = str(self.attr_inp.get())
         self.outp.configure(state=NORMAL)
         try:
-            output = self.scrapit(str(self.geturl),str(self.gettag))
+            output = self.scrapit(self.geturl,self.gettag,self.attrinp,self.content)
             for lines in output:
                 ln=str(lines)+'\n'
                 self.outp.insert('end',ln)
             self.outp.configure(state=DISABLED)
             self.clr_but.state(['!disabled'])
-        except TclError:
-            print(TclError)
+        except:
+            print("Url not found or http(s):// is missing")
 
     def clear(self):
         self.outp.configure(state=NORMAL)
@@ -101,13 +124,23 @@ class scrapprojgui(datascraping):
         self.outp.configure(state=DISABLED)
         self.clr_but.state(['disabled'])
 
+    def conshow(self):
+        if(self.visible[1].get()):
+            self.content = True
+        else:
+            self.content = False
 
     def tagwise(self):
         if(self.visible[0].get()):
             self.tag_inp.place_configure(in_=self.frame1,x=150,y=32)
+            self.attrlb.place_configure(in_=self.frame1,x=195,y=32)
+            self.attr_inp.place_configure(in_=self.frame1,x=260,y=32)
         else:
+            self.attr_inp.delete(0,END)
             self.tag_inp.delete(0,END)
             self.tag_inp.place_forget()
+            self.attr_inp.place_forget()
+            self.attrlb.place_forget()
 
 
 def main():
